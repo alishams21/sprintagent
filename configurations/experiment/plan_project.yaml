@@ -1,0 +1,2 @@
+defaults:
+  - core # inherits from configurations/application/core.yaml

@@ -1,0 +1,14 @@
+name: "visualization_planner_runner_instruction"
+version: "1.0"
+description: "Initial instruction to start visualization workflow for a single plan (run once per plan)"
+template_variables: ["plan_name"]
+prompt: |
+  You are generating the **{{ plan_name }}** diagram for this run.
+
+  Follow this workflow:
+  1. Call `request_initial_design()` first. The designer will create a Mermaid diagram from the {{ plan_name }} plan. Wait for the result.
+  2. Call `request_critique()`. The critic will compare the diagram image to the plan and return scores (hierarchy_consistency, completeness, clarity, layout_quality) and feedback.
+  3. If the scores are low or the critic lists issues, call `request_design_change(instruction)` with the critic's feedback so the designer can fix the diagram. Then call `request_critique()` again. Repeat until the diagram is satisfactory or you have done enough rounds.
+  4. When satisfied, output a brief summary that the {{ plan_name }} diagram is complete.
+
+  Do not skip step 1 or 2. Always call `request_initial_design()` first, then `request_critique()`.

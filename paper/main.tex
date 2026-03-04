@@ -1,0 +1,670 @@
+% !TEX program = pdflatex
+\documentclass[11pt, a4paper]{article}
+
+% ── Packages ──────────────────────────────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{tikz}
+\usepackage{listings}
+\usepackage[numbers]{natbib}
+\usepackage{microtype}
+\usepackage{abstract}
+
+% ── Macros ────────────────────────────────────────────────────────────────────
+\newcommand{\sprintagent}{\textsc{SprintAgent}}
+\newcommand{\ioc}{Inversion of Control}
+\newcommand{\di}{Dependency Injection}
+
+% ── Listings config ──────────────────────────────────────────────────────────
+\lstset{
+  basicstyle=\ttfamily\small,
+  keywordstyle=\bfseries\color{blue!70!black},
+  commentstyle=\color{green!50!black},
+  stringstyle=\color{red!60!black},
+  breaklines=true,
+  frame=single,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  captionpos=b,
+}
+
+% ── Hyperref config ──────────────────────────────────────────────────────────
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!70!black,
+  citecolor=blue!70!black,
+  urlcolor=blue!70!black,
+}
+
+% ══════════════════════════════════════════════════════════════════════════════
+\title{%
+  \sprintagent{}: A Production-Ready Framework for\\
+  Hierarchical Autonomous Agentic Systems%
+}
+\author{Ali Shamsaddinlou}
+\date{March 2026}
+
+\begin{document}
+\maketitle
+
+% ── Abstract ─────────────────────────────────────────────────────────────────
+\begin{abstract}
+From an engineering perspective, building autonomous agentic systems
+with large language models (LLMs) demands more deliberate design
+thinking than traditional software.  The trade-offs are sharper and
+the consequences of getting them wrong are harder to debug: complexity
+vs.\ explainability, isolation vs.\ throughput, context growth vs.\
+performance, and configuration flexibility vs.\ simplicity.  Yet most
+prototypes lack the engineering infrastructure needed to navigate these
+trade-offs in production.  This paper introduces \sprintagent{}, an
+open-source framework that provides a production-ready scaffold for
+hierarchical autonomous agentic systems, developed with these
+engineering trade-offs explicitly in mind so that the resulting systems
+remain manageable, auditable, and explainable.  The framework features
+a planner/designer/critic orchestration loop per agent, Hydra-based
+\ioc{} configuration, SQLite-backed session management with turn
+trimming, checkpoint-based auto-reset on performance degradation,
+isolated parallel execution, and unified logging for observability.
+The framework is designed to be highly modular: practitioners can plug
+their own logic into each module and extend on top with minimal
+friction.  To demonstrate how this looks in practice, an agentic
+project-management system is built on top of \sprintagent{} as a
+reference application; the project-management system is not the
+contribution itself but rather a demonstration of the scaffold in
+action.
+\end{abstract}
+
+% ── 1. Introduction ──────────────────────────────────────────────────────────
+\section{Introduction}
+\label{sec:introduction}
+
+Large language models have enabled a new class of autonomous software
+agents that can plan, reason, and execute multi-step tasks with minimal
+human intervention~\cite{wang2024survey, xi2023rise}.  Frameworks such as
+LangChain~\cite{chase2023langchain}, AutoGen~\cite{wu2023autogen},
+MetaGPT~\cite{hong2023metagpt}, and CrewAI~\cite{crewai2024} have
+lowered the barrier to building agentic applications.  However, moving
+from a notebook prototype to a production-grade agentic system reveals
+a gap: most existing frameworks focus on the \emph{agent logic} (prompt
+chaining, tool calling, memory) while leaving the surrounding
+\emph{engineering infrastructure}---configuration management, fault
+tolerance, session persistence, observability, and execution
+isolation---to the developer.
+
+From an engineering perspective, building agentic systems demands more
+deliberate design thinking than traditional software.  The trade-offs
+are sharper and the consequences of getting them wrong are harder to
+debug:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Complexity vs.\ explainability} -- powerful multi-agent
+    orchestration is useless if no one can understand what the system
+    did and why.
+  \item \textbf{Isolation vs.\ throughput} -- strong fault boundaries
+    keep runs safe but add overhead.
+  \item \textbf{Context growth vs.\ performance} -- agents accumulate
+    history that must be managed, not just appended.
+  \item \textbf{Configuration flexibility vs.\ simplicity} -- real-world
+    systems have dozens of knobs; the config system must scale without
+    becoming its own problem.
+\end{itemize}
+
+What does a production-ready autonomous agentic system look like when it
+needs to handle complex agents without becoming a mess?  This question
+motivated the design of \sprintagent{}, an open-source framework
+developed with these engineering trade-offs explicitly in mind.
+\sprintagent{} is a highly modular scaffold where practitioners can plug
+their own logic into each module and extend on top.  For demonstration
+purposes, an agentic project-management system is built on top of the
+framework to show what it looks like in practice to build such a system.
+
+The key contributions of this paper are:
+\begin{enumerate}[leftmargin=*]
+  \item A \textbf{hierarchical agentic architecture} in which each stage
+    (project, module, task, visualization) is handled by an autonomous
+    agent that internally runs a planner/designer/critic refinement loop.
+  \item An \textbf{\ioc{} configuration system} built on Hydra and
+    OmegaConf with custom resolvers, enabling new agents and experiments
+    to be wired entirely through YAML without code changes.
+  \item \textbf{Production infrastructure} including SQLite-backed
+    session management with turn trimming and summarization, checkpoint-based
+    auto-reset on quality degradation, process-isolated parallel
+    execution, and unified file-and-terminal logging for observability
+    and explainability.
+  \item An \textbf{open-source implementation} accompanied by a
+    demonstration application---an agentic project-management
+    system---that illustrates how to build a complete hierarchical
+    agentic application on the framework.
+\end{enumerate}
+
+% ── 2. Background ────────────────────────────────────────────────────────────
+\section{Background and Motivation}
+\label{sec:background}
+
+\subsection{LLM-Based Autonomous Agents}
+
+The ReAct paradigm~\cite{yao2023react} showed that interleaving
+reasoning and action in LLMs produces more capable agents.
+Reflexion~\cite{shinn2023reflexion} added verbal self-reflection,
+enabling agents to learn from mistakes within a single episode.  These
+ideas have been operationalized in multi-agent frameworks: AutoGen
+introduces conversable agents that collaborate through
+messages~\cite{wu2023autogen}; MetaGPT assigns software-engineering
+roles to agents in a simulated company~\cite{hong2023metagpt}; CrewAI
+orchestrates role-playing agents with configurable
+workflows~\cite{crewai2024}; and the OpenAI Agents SDK provides
+primitives for tool-calling agents with handoff
+support~\cite{openaiagentssdk2025}.
+
+\subsection{The Production Gap}
+
+While these frameworks excel at composing agent logic, production
+deployments require additional concerns:
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Configuration complexity.}  Real-world agentic systems
+    have dozens of knobs (model selection, temperature, scoring
+    thresholds, memory policies, pipeline stages).  Hard-coded or
+    flat-file configs do not scale.
+  \item \textbf{Fault tolerance.}  LLM outputs are non-deterministic;
+    iterative refinement can degrade quality.  Systems need mechanisms
+    to detect and recover from regressions.
+  \item \textbf{Session persistence and memory management.}  Long-running
+    agents accumulate context that exceeds token limits.  Persistent
+    sessions with turn trimming and summarization are essential.
+  \item \textbf{Observability.}  Debugging multi-agent systems requires
+    unified logging that captures what each agent did, when, and why.
+  \item \textbf{Execution isolation.}  Parallel runs must not interfere
+    with each other; failures in one run should not cascade.
+\end{itemize}
+
+\sprintagent{} addresses each of these concerns as a first-class
+framework feature, so developers can focus on domain logic rather than
+infrastructure.
+
+% ── 3. System Overview ───────────────────────────────────────────────────────
+\section{System Overview}
+\label{sec:overview}
+
+\sprintagent{} transforms a high-level project brief into an
+execution-ready roadmap through a four-stage hierarchical pipeline:
+\textbf{project} $\rightarrow$ \textbf{module} $\rightarrow$
+\textbf{task} $\rightarrow$ \textbf{visualization}.  Each stage is
+handled by a specialized agent that refines its output through an
+internal planner/designer/critic loop before passing results to the
+next level.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/pipeline.png}
+  \caption{Hierarchical pipeline.  Each stage consumes the output of the
+    previous stage and produces a refined plan.  The visualization stage
+    generates Mermaid diagrams rendered to PNG/PDF.}
+  \label{fig:pipeline}
+\end{figure}
+
+Table~\ref{tab:stages} summarizes the inputs, outputs, and responsible
+agent for each stage.
+
+\begin{table}[H]
+  \centering
+  \caption{Pipeline stages and their agents.}
+  \label{tab:stages}
+  \begin{tabular}{@{}llll@{}}
+    \toprule
+    \textbf{Stage} & \textbf{Input} & \textbf{Output} & \textbf{Agent} \\
+    \midrule
+    Project       & User brief           & \texttt{project\_plan.md}  & StatefulProjectAgent \\
+    Module        & Project plan         & \texttt{module\_plan.md}   & StatefulModuleAgent  \\
+    Task          & Module plan          & \texttt{task\_plan.md}     & StatefulTaskAgent    \\
+    Visualization & All three plans      & Mermaid + PNG/PDF diagrams & StatefulVisualizationAgent \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The pipeline stages are configurable: users can set
+\texttt{start\_stage} and \texttt{stop\_stage} in YAML to run any
+contiguous subset of the pipeline.
+
+% ── 4. Architecture ──────────────────────────────────────────────────────────
+\section{Architecture}
+\label{sec:architecture}
+
+\subsection{Planner/Designer/Critic Loop}
+\label{sec:pdc}
+
+Every stage agent uses the same internal architecture: three sub-agents
+coordinated by a planner (Figure~\ref{fig:agents}).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/agents_internal.png}
+  \caption{Internal agent architecture.  The planner orchestrates the
+    designer and critic through tool calls.  Checkpointing enables
+    rollback when quality degrades.}
+  \label{fig:agents}
+\end{figure}
+
+\paragraph{Designer.}
+Creates and refines the artifact (plan text or Mermaid diagram).  It
+receives the context---user brief or parent plan---produces an initial
+design, and iteratively improves it based on critic feedback.  Its full
+conversation history is persisted in a SQLite session so the critic and
+subsequent iterations have complete context.
+
+\paragraph{Critic.}
+Evaluates the current artifact against domain-specific criteria
+(structure, clarity, completeness) and returns structured feedback with
+per-category scores.  For project, module, and task stages the critic
+reads the designer's session history.  For the visualization stage the
+critic is a \emph{vision-language model} (VLM) that receives the
+rendered diagram image alongside the plan text.
+
+\paragraph{Planner.}
+Orchestrates the loop via internal tools:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{request\_initial\_design} -- ask the designer for the
+    first draft.
+  \item \texttt{request\_critique} -- ask the critic to evaluate the
+    current artifact.
+  \item \texttt{request\_design\_change} -- ask the designer to address
+    specific issues raised by the critic.
+  \item \texttt{reset\_plan\_to\_previous\_checkpoint} -- roll back to
+    the last good state if scores degrade.
+\end{itemize}
+
+The planner alternates between critique and design-change rounds until
+quality thresholds are met or the maximum number of rounds is reached.
+\texttt{max\_critique\_rounds} and \texttt{early\_finish\_min\_score}
+are configurable per agent.
+
+\subsection{Checkpoint-Based Auto-Reset}
+\label{sec:checkpoint}
+
+Each critique round updates a checkpoint consisting of the current
+plan state and associated scores.  The framework maintains an
+\emph{N-1/N} checkpoint pair: the current checkpoint~(N) and the
+previous one~(N-1).  If the total score after a critique is lower than
+the previous checkpoint, the planner can call
+\texttt{reset\_plan\_to\_previous\_checkpoint}, which:
+\begin{enumerate}[leftmargin=*]
+  \item Compares the total scores of checkpoints N and N-1.
+  \item If N $<$ N-1, restores the plan state from checkpoint N-1.
+  \item Appends a rollback message to the designer session so subsequent
+    iterations continue from the better state.
+\end{enumerate}
+This mechanism provides \textbf{intra-run fault tolerance}: the system
+recovers from quality regressions without manual intervention.
+
+\subsection{Structured Scoring}
+\label{sec:scoring}
+
+Critic output is a structured dataclass (\texttt{CritiqueWithScores})
+with domain-specific categories.  Each category has a name, a grade
+(0--10), and a textual comment.  Domain-specific subclasses define the
+relevant categories:
+
+\begin{itemize}[leftmargin=*]
+  \item \texttt{ProjectCritiqueWithScores} -- project-level criteria.
+  \item \texttt{ModuleCritiqueWithScores} -- module-level criteria.
+  \item \texttt{TaskCritiqueWithScores} -- task-level criteria.
+  \item \texttt{VisualizationCritiqueWithScores} -- diagram-level criteria.
+\end{itemize}
+
+A shared \texttt{compute\_total\_score} function sums category grades,
+and \texttt{format\_score\_deltas\_for\_planner} formats score changes
+between iterations so the planner can make informed decisions about
+when to continue, stop, or roll back.
+
+\subsection{Inversion of Control and Configuration}
+\label{sec:ioc}
+
+\sprintagent{} follows the \ioc{} principle~\cite{fowler2004ioc}: the
+framework owns the execution flow and calls user-supplied components at
+well-defined extension points.  Configuration is managed through
+Hydra~\cite{hydra2019} and OmegaConf~\cite{omegaconf2019}, providing:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Hierarchical YAML composition.}  Each agent type has a
+    \texttt{core\_*.yaml} file with shared settings and a
+    \texttt{workflow\_*.yaml} overlay for workflow-specific overrides.
+    Hydra's defaults list composes them automatically.
+  \item \textbf{Cross-config interpolation.}  Global settings (e.g.,
+    \texttt{openai.service\_tier}) are defined once and interpolated
+    into agent configs via \texttt{\$\{openai.service\_tier\}}.
+  \item \textbf{Custom resolvers.}  OmegaConf resolvers for path
+    resolution (\texttt{resolve\_path}, \texttt{resolve\_list}),
+    boolean negation (\texttt{not}), equality checks (\texttt{equal}),
+    and conditionals (\texttt{ifelse}) enable expressive config logic
+    without code.
+  \item \textbf{Agent wiring.}  Each experiment declares a
+    \texttt{compatible\_*\_agents} dictionary mapping config names to
+    Python classes.  At runtime the framework reads the
+    \texttt{\_name} field from the resolved config and instantiates the
+    corresponding class, achieving dependency injection through
+    configuration.
+\end{itemize}
+
+Adding a new agent type requires only a YAML config file and a
+registration entry in the experiment's compatible agents dictionary---no
+changes to the core orchestration code.
+
+\subsection{Session Management and Turn Trimming}
+\label{sec:session}
+
+Designer and critic conversations are persisted in SQLite databases
+(e.g., \texttt{prompt\_000\_project\_designer.db}).  This provides:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Crash recovery.}  Sessions survive process restarts.
+  \item \textbf{Context for critics.}  The critic reads the designer's
+    full session history to evaluate the current state in context.
+  \item \textbf{Auditability.}  Every interaction is recorded and can be
+    inspected post-hoc.
+\end{itemize}
+
+For long-running agents, unbounded context growth exceeds token limits.
+\sprintagent{} addresses this with \texttt{TurnTrimmingSession}, a
+decorator that wraps the base \texttt{SQLiteSession}:
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Turn parsing.}  Conversation items are segmented into
+    turns by user-message boundaries.
+  \item \textbf{Retention window.}  The last $N$ turns (configurable via
+    \texttt{keep\_last\_n\_turns}) are kept intact.
+  \item \textbf{Image stripping.}  Older turns have images replaced with
+    text placeholders to reduce token usage.
+  \item \textbf{Optional summarization.}  When
+    \texttt{enable\_summarization} is active, trimmed turns are
+    summarized by an LLM.  Summaries are cached in a dedicated SQLite
+    table (keyed by turn content hash) to avoid redundant API calls.
+\end{enumerate}
+
+An additional \texttt{IntraTurnImageFilter} strips images from older
+tool outputs \emph{within} a single turn, keeping only the most recent
+observations.  This is particularly useful for the visualization critic,
+which may call observation tools multiple times per iteration.
+
+\subsection{Parallel Execution and Process Isolation}
+\label{sec:parallel}
+
+\sprintagent{} supports both sequential and parallel execution of
+prompts.  Parallel execution uses \texttt{ProcessPoolExecutor}, where
+each prompt runs in a separate process:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Memory isolation.}  Each process has its own address
+    space; no shared mutable state.
+  \item \textbf{Fault containment.}  A crash or exception in one worker
+    does not affect others.  The orchestrator collects results and
+    reports per-prompt success or failure.
+  \item \textbf{Log separation.}  Each worker creates its own
+    \texttt{FileLoggingContext} writing to
+    \texttt{prompt\_XXX/plan.log}, with \texttt{suppress\_stdout=True}
+    to prevent log interleaving.
+\end{itemize}
+
+The number of workers is controlled by the \texttt{num\_workers}
+configuration parameter; setting it to~1 enables sequential execution
+for debugging.
+
+\subsection{Unified Logging}
+\label{sec:logging}
+
+\sprintagent{} uses a \texttt{FileLoggingContext} context manager that
+attaches a file handler to Python's root logger, capturing output from
+all modules without per-module configuration:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Experiment-level log.}  The main process writes to
+    \texttt{experiment.log} with both file and console output.
+  \item \textbf{Per-prompt logs.}  Parallel workers write to isolated
+    \texttt{plan.log} files with console output suppressed.
+  \item \textbf{Consistent format.}  All log entries follow
+    \texttt{timestamp -- logger\_name -- level -- message}.
+\end{itemize}
+
+Combined with the SQLite session databases, this creates a full audit
+trail: for every prompt one can inspect the experiment log, the
+per-prompt log, and the designer/critic conversation history.
+
+\subsection{Prompt Management}
+\label{sec:prompts}
+
+Prompts are stored as YAML files with Jinja2 templates under a
+structured directory (\texttt{src/prompts/data/<agent\_type>/}).  A
+\texttt{PromptRegistry} provides type-safe access through
+domain-specific enums (e.g., \texttt{ProjectAgentPrompts.PLANNER\_AGENT})
+and enforces strict template-variable validation: the set of provided
+keyword arguments must exactly match the declared
+\texttt{template\_variables}, preventing silent errors from missing or
+extra parameters.
+
+Prompts are loaded and cached by a \texttt{PromptManager} with
+LRU caching, and rendered at runtime with the appropriate context
+(e.g., the user brief, a parent plan, or critic feedback).
+
+% ── 5. Use Case ──────────────────────────────────────────────────────────────
+\section{Use Case: Agentic Project Management}
+\label{sec:usecase}
+
+To demonstrate how the framework looks in practice, an autonomous
+project-management pipeline is built on top of \sprintagent{} as a
+reference application.  This use case is not the primary contribution;
+it serves to illustrate how practitioners can wire their own agents,
+tools, and domain logic into the scaffold.  Given a natural-language brief such as
+\emph{``Plan the frontend dashboard module, including UI design tasks
+and testing tasks,''} the system produces:
+
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Project plan} -- High-level components, boundaries, and
+    dependencies (\texttt{project\_plan.md}).
+  \item \textbf{Module plan} -- Module structure per component, refined
+    from the project plan (\texttt{module\_plan.md}).
+  \item \textbf{Task plan} -- Concrete, assignable tasks per module
+    (\texttt{task\_plan.md}).
+  \item \textbf{Visual diagrams} -- Mermaid-based hierarchy diagrams
+    rendered to PNG and PDF for each plan level.
+\end{enumerate}
+
+The pipeline is fully autonomous: the user provides a brief, and agents
+iteratively refine plans until quality criteria are met.  Each stage
+consumes the output of the previous one, ensuring alignment from
+high-level strategy down to individual tasks.
+
+The visualization stage is noteworthy because its critic is a
+vision-language model.  After the designer produces a Mermaid diagram
+and the system renders it to an image, the VLM critic compares the
+rendered diagram against the source plan, checking for structural
+accuracy, completeness, and readability.  This closes the loop between
+textual plans and visual artifacts.
+
+Outputs are organized under
+\texttt{outputs/<timestamp>/<run>/prompt\_<id>/}, with all plans,
+diagrams, logs, and session databases co-located for easy inspection.
+
+% ── 6. Implementation ────────────────────────────────────────────────────────
+\section{Implementation Details}
+\label{sec:implementation}
+
+\sprintagent{} is implemented in Python and built on the OpenAI Agents
+SDK~\cite{openaiagentssdk2025} for agent execution.  Key technology
+choices include:
+
+\begin{table}[H]
+  \centering
+  \caption{Technology stack.}
+  \label{tab:stack}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Component}          & \textbf{Technology} \\
+    \midrule
+    Agent execution             & OpenAI Agents SDK \\
+    Configuration               & Hydra + OmegaConf \\
+    Session persistence         & SQLite \\
+    Diagram rendering           & Mermaid CLI (Node.js) \\
+    Parallel execution          & \texttt{ProcessPoolExecutor} \\
+    Prompt templating           & Jinja2 + YAML \\
+    Package management          & \texttt{uv} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The codebase is organized as follows:
+
+\begin{itemize}[leftmargin=*]
+  \item \texttt{src/agent\_utils/} -- Shared agent infrastructure:
+    base stateful agent, checkpointing, scoring, turn trimming, and
+    image filtering.
+  \item \texttt{src/\{project,module,task,visualization\}\_agents/} --
+    Domain-specific agent implementations.
+  \item \texttt{src/experiments/} -- Experiment orchestration and
+    pipeline execution.
+  \item \texttt{src/prompts/} -- Prompt registry, manager, and YAML
+    templates.
+  \item \texttt{src/utils/} -- Logging, parallel execution, OpenAI
+    helpers, and Mermaid rendering.
+  \item \texttt{configurations/} -- Hydra YAML configs for agents,
+    experiments, and pipelines.
+\end{itemize}
+
+% ── 7. Design Patterns ──────────────────────────────────────────────────────
+\section{Design Patterns}
+\label{sec:patterns}
+
+Table~\ref{tab:patterns} summarizes the software design patterns
+employed in \sprintagent{} and their roles.
+
+\begin{table}[H]
+  \centering
+  \caption{Design patterns in \sprintagent{}.}
+  \label{tab:patterns}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Pattern} & \textbf{Location} & \textbf{Purpose} \\
+    \midrule
+    Template Method  & \texttt{BaseStatefulAgent}     & Domain-specific hooks for prompts and behavior \\
+    Decorator        & \texttt{TurnTrimmingSession}   & Wraps sessions with trimming/summarization \\
+    Strategy         & Prompt registry, scoring       & Pluggable prompts and scoring schemas \\
+    Factory Method   & \texttt{\_create\_*\_agent()}   & Agent creation from configuration \\
+    \ioc{}           & Hydra + compatible agents dict & Config-driven agent wiring \\
+    Filter           & \texttt{IntraTurnImageFilter}  & Pre-call input filtering for token control \\
+    Abstract Base    & \texttt{CritiqueWithScores}    & Shared scoring interface across domains \\
+    N-1/N Checkpoint & Checkpoint state               & Rollback on quality degradation \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+% ── 8. Discussion ────────────────────────────────────────────────────────────
+\section{Discussion}
+\label{sec:discussion}
+
+As outlined in Section~\ref{sec:introduction}, building agentic systems
+demands deliberate engineering trade-offs.  This section revisits each
+trade-off and discusses how \sprintagent{} addresses it.
+
+\paragraph{Complexity vs.\ explainability.}
+A recurring tension in agentic systems is between the power of complex
+multi-agent orchestration and the need for humans to understand what the
+system did and why.  \sprintagent{} addresses this by making every
+agent interaction auditable (SQLite sessions), every decision logged
+(unified logging), and every quality judgment structured (scored
+critiques).  The checkpoint mechanism further supports explainability:
+when a rollback occurs, the system records what degraded and what was
+restored.
+
+\paragraph{Isolation vs.\ throughput.}
+Process isolation provides strong fault containment but incurs overhead
+from process creation and inter-process serialization (all arguments
+must be picklable).  For most agentic workloads, where LLM API latency
+dominates, this overhead is negligible.  The framework also supports
+sequential execution for debugging and development.
+
+\paragraph{Context growth vs.\ performance.}
+Agents accumulate conversation history that, if left unmanaged, exceeds
+token limits and inflates API costs.  \sprintagent{} balances context
+richness against performance through turn trimming (keeping only the
+last $N$ turns intact), image stripping for older observations, and
+optional LLM-based summarization with hash-keyed caching to avoid
+redundant calls.  The result is bounded context windows without losing
+the essential reasoning trace.
+
+\paragraph{Configuration flexibility vs.\ simplicity.}
+Real-world agentic systems have dozens of knobs---model selection,
+scoring thresholds, memory policies, pipeline stages---and the
+configuration system must scale without becoming its own problem.
+\sprintagent{} addresses this through Hydra's hierarchical YAML
+composition, cross-config interpolation, and custom OmegaConf resolvers.
+The \ioc{} approach means that adding a new agent type, experiment, or
+scoring schema requires only YAML and a Python class---no changes to the
+orchestration core.  This separation of wiring from logic reduces the
+cost of experimentation and lowers the barrier for new contributors.
+
+\paragraph{Limitations.}
+The current implementation is tightly coupled to the OpenAI Agents SDK
+for agent execution.  Supporting alternative LLM providers would require
+an adapter layer.  The checkpoint mechanism operates at the plan level
+and does not yet support fine-grained rollback of individual tool calls.
+Evaluation is currently qualitative; integrating automated benchmarks
+for plan quality is left for future work.
+
+% ── 9. Related Work ──────────────────────────────────────────────────────────
+\section{Related Work}
+\label{sec:related}
+
+\textbf{Self-improving agents.}
+ReAct~\cite{yao2023react} and Reflexion~\cite{shinn2023reflexion}
+introduced reasoning-and-acting loops and verbal self-reflection.
+\sprintagent{}'s planner/designer/critic loop can be seen as a
+structured variant of self-reflection, where the critic provides
+quantitative scores and the planner makes rollback decisions based on
+score trajectories.
+
+\textbf{Configuration and IoC.}
+The \ioc{} pattern~\cite{fowler2004ioc} is well-established in
+enterprise software but underutilized in LLM-agent frameworks.
+Hydra~\cite{hydra2019} and OmegaConf~\cite{omegaconf2019} are widely
+used in ML experiment management; \sprintagent{} adapts them for agent
+orchestration.
+
+% ── 10. Conclusion ───────────────────────────────────────────────────────────
+\section{Conclusion}
+\label{sec:conclusion}
+
+This paper presented \sprintagent{}, a production-ready framework for
+hierarchical autonomous agentic systems, developed with four core
+engineering trade-offs in mind: complexity vs.\ explainability,
+isolation vs.\ throughput, context growth vs.\ performance, and
+configuration flexibility vs.\ simplicity.  The framework provides
+planner/designer/critic orchestration per agent, \ioc{}-based
+configuration, SQLite session management with turn trimming, checkpoint
+auto-reset on degradation, process-isolated parallel execution, and
+unified logging---all driven by YAML configuration.  Its modular design
+allows practitioners to plug their own logic into each module and extend
+on top.  Through a demonstration application---an agentic
+project-management system built on the framework---the paper showed what
+it looks like in practice to build a complete hierarchical agentic
+application on \sprintagent{}, confirming that the scaffold is both
+functional and extensible.
+
+Future work includes supporting alternative LLM backends, adding
+quantitative benchmarks for plan quality, extending the checkpoint
+mechanism to sub-agent granularity, and exploring distributed execution
+beyond single-machine process pools.
+
+\sprintagent{} is open source and available at
+\url{https://github.com/alishams21/sprintagent}.
+
+% ── Bibliography ─────────────────────────────────────────────────────────────
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

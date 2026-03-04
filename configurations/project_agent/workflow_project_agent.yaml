@@ -1,0 +1,15 @@
+defaults:
+  - core_project_agent
+
+# Agent configurations (workflow_* keys + base_stateful_agent expected keys)
+agents:
+  # Keys required by BaseStatefulAgent (_create_designer_agent, _create_critic_agent, _create_planner_agent)
+  designer_agent:
+    name: "project_designer"
+    max_turns: 1000
+  critic_agent:
+    name: "project_critic"
+    max_turns: 500
+  planner_agent:
+    name: "project_planner"
+    max_turns: 500

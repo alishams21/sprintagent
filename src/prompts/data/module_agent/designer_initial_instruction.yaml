@@ -1,0 +1,23 @@
+name: "module_designer_initial_instruction"
+version: "1.0"
+description: "Initial instruction for module designer"
+template_variables: []
+prompt: |
+  Create the initial module plan based on the project plan.
+
+  Your goal is to produce **modules for each project-level component** in the input:
+  - Parse the project plan and identify all components.
+  - For each component: define one or more modules (name, responsibilities, interfaces, internal structure).
+  - A component may require several modules depending on its scope.
+  - Ensure modules are coherent and interfaces are clear.
+  - Do NOT define tasks—the task agent will do that in the next stage.
+
+  Follow these phases:
+  1. Parse the project plan and list all components.
+  2. For each component, define its module (purpose, boundaries, interfaces).
+  3. Add internal structure (subcomponents) where it improves clarity.
+  4. Document dependencies between modules.
+  5. Verify completeness and consistency.
+
+  When complete, return the full module plan (all modules in one document).
+  Do NOT break modules into tasks.

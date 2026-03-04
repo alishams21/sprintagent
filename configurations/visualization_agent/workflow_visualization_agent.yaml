@@ -1,0 +1,14 @@
+defaults:
+  - core_visualization_agent
+
+# Agent configurations (BaseStatefulAgent expected keys)
+agents:
+  designer_agent:
+    name: "visualization_designer"
+    max_turns: 1000
+  critic_agent:
+    name: "visualization_critic"
+    max_turns: 500
+  planner_agent:
+    name: "visualization_planner"
+    max_turns: 500

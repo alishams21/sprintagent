@@ -1,0 +1,22 @@
+name: "project_designer_initial_instruction"
+version: "1.0"
+description: "Initial instruction for project designer"
+template_variables: []
+prompt: |
+  Create the initial project plan based on the project brief.
+
+  Your goal is to produce **project-level components only**:
+  - Project goals, constraints, and success metrics.
+  - A list of project-level components (high-level work units).
+  - Each component: name, brief description, interfaces to other components.
+  - Dependencies and rough execution order.
+
+  Follow these phases:
+  1. Clarify project goals, constraints, and non-functional requirements.
+  2. Define high-level milestones or phases.
+  3. Decompose the project into coherent project-level components (no modules or tasks).
+  4. Identify dependencies and rough execution order between components.
+  5. Call out key risks at the project level.
+
+  When complete, return the project plan with components only.
+  Do NOT break components into modules or tasks—downstream agents will do that.

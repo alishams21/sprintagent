@@ -1,0 +1,50 @@
+# Core module agent configuration with shared settings
+
+# Module mode: "single" (standalone) or "part_of_project" (belongs to a project)
+mode: "part_of_project"
+
+# Session memory management
+session_memory:
+  enabled: true
+  keep_last_n_turns: 2
+  enable_summarization: true
+  summarization_model: "gpt-5.2"
+  summarization_thinking: "medium"
+
+# Module constraints
+module:
+  min_duration_days: 5
+  max_duration_days: 90
+  default_priority: "medium"
+  max_tasks_per_module: 20
+
+# Resource allocation
+resources:
+  max_concurrent_tasks_per_member: 3
+  skill_matching_enabled: true
+
+# OpenAI model and reasoning configuration
+openai:
+  model: "gpt-5.2"
+  service_tier: ${openai.service_tier}
+  reasoning_effort:
+    designer: "medium"
+    planner: "medium"
+    critic: "medium"
+  verbosity:
+    designer: "medium"
+    planner: "medium"
+    critic: "medium"
+
+# API timeout configuration
+api_timeout:
+  connect: 30.0
+  read: 1800
+  write: 1800
+  pool: 1800
+
+# Maximum number of review cycles
+max_review_cycles: 3
+# BaseStatefulAgent: number of critique rounds
+max_critique_rounds: 3
+early_finish_min_score: 8

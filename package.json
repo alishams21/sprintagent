@@ -1,0 +1,15 @@
+{
+  "name": "sprintagent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agentic Construction of Execution-Ready Project Roadmaps",
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.0.0"
+  },
+  "dependencies": {
+    "run": "^1.5.0"
+  }
+}

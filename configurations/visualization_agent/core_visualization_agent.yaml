@@ -1,0 +1,39 @@
+# Core Visualization Agent configuration
+
+# Render PDF in addition to PNG (requires mermaid-cli)
+render_pdf: true
+
+# Session memory (optional)
+session_memory:
+  enabled: true
+  keep_last_n_turns: 2
+  enable_summarization: true
+  summarization_model: "gpt-4o"
+  summarization_thinking: "none"
+
+# OpenAI: use a vision-capable model for the critic (e.g. gpt-4o) so it can evaluate the diagram image
+# reasoning_effort is not supported by gpt-4o (only by o1/o1-mini); set to "none" to omit it.
+# gpt-4o only supports verbosity "medium" (not "low").
+openai:
+  model: "gpt-4o"
+  service_tier: ${openai.service_tier}
+  reasoning_effort:
+    designer: "none"
+    planner: "none"
+    critic: "none"
+  verbosity:
+    designer: "medium"
+    planner: "medium"
+    critic: "medium"
+
+api_timeout:
+  connect: 30.0
+  read: 1800
+  write: 1800
+  pool: 1800
+
+# Maximum review cycles
+max_review_cycles: 3
+# BaseStatefulAgent: number of critique rounds
+max_critique_rounds: 3
+early_finish_min_score: 8

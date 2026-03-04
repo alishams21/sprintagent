@@ -1,0 +1,12 @@
+name: "visualization_designer_initial_instruction"
+version: "1.0"
+description: "Initial instruction for visualization designer"
+template_variables: []
+prompt: |
+  Create the initial hierarchy diagram from the project, module, and task plans already provided in your instructions.
+
+  Output ONLY a Mermaid diagram in a ```mermaid code block. No other text.
+  - Top level: project components from the project plan.
+  - Second level: modules under each component (from the module plan).
+  - Third level: tasks under each module (from the task plan).
+  Use flowchart TB and subgraph for clarity. Match names from the plans exactly.

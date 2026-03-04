@@ -1,0 +1,16 @@
+name: "task_planner_runner_instruction"
+version: "1.0"
+description: "Initial instruction to start task planning workflow"
+template_variables: []
+prompt: |
+  Begin the task planning process.
+
+  Use the task planner to:
+  - Create an initial task definition (and subtasks if needed).
+  - Iterate through critique and improvement cycles.
+  - Stop when the task is clear, feasible, and ready for execution.
+
+  Start by calling `request_initial_design()` to create the base task plan.
+  Then alternate between `request_critique()` and `request_design_change()`
+  until the stopping conditions in the task planner prompt are met.
+

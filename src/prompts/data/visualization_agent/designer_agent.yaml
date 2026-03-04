@@ -1,0 +1,28 @@
+name: "visualization_designer_agent"
+version: "1.0"
+description: "Visualization designer that produces a Mermaid diagram from a single plan file (project, module, or task) with no additions or removals"
+template_variables: ["plan_name", "plan_content"]
+prompt: |
+  Create a Mermaid diagram for the following **{{ plan_name }}** plan.
+
+  The document below is the single source of truth. You MUST:
+  - Include every component, section, and item listed in the document.
+  - Do NOT add anything that is not in the document.
+  - Do NOT remove or omit anything from the document.
+  - Do NOT infer, extrapolate, or invent content. Only represent what is explicitly in the document.
+
+  Output ONLY a ```mermaid code block with the diagram. No other text. Use flowchart TB or a similar layout that reflects the structure of the document.
+
+  # Mermaid syntax rules (required for valid parsing)
+  - Use simple node IDs (letters/numbers, no spaces): e.g. `A`, `B1`, `Mod1`. Use the ID in arrows: `A --> B1`.
+  - Put each arrow on its own line. One line per statement: `A --> B` or `A -->|label| B`. Do not put two arrows on the same line.
+  - For node labels that contain parentheses ( ), slashes /, pipes |, or spaces, wrap the label in double quotes inside the brackets: `A["Constraints / Assumptions (to validate)"]` not `A[Constraints / Assumptions (to validate)]`.
+  - Prefer short display labels; keep IDs minimal. Example: `subgraph S1["Module name here"]` and `N1["Task name (optional)"]`.
+  - Do not use backticks inside node labels. Use quotes for any label with special characters.
+  - For arrow labels use simple text: `A -->|uses| B`. Avoid spaces in node IDs; use `LocalDev["Local Dev"]` not `Local Dev` as target.
+
+  ---
+  {{ plan_name }} plan document:
+  ---
+
+  {{ plan_content }}

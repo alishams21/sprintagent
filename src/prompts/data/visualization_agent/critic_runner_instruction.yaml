@@ -1,0 +1,16 @@
+name: "visualization_critic_runner_instruction"
+version: "1.0"
+description: "Instruction for starting visualization diagram critique (VLM receives image + single plan)"
+template_variables: ["plan_name", "plan_content"]
+prompt: |
+  You are evaluating the current diagram image (attached) against the following **{{ plan_name }}** plan.
+
+  Verify:
+  - Every component, section, and item in the plan appears in the diagram.
+  - Names in the diagram match the plan exactly.
+  - Nothing is added that is not in the plan; nothing is missing.
+
+  Provide structured scores for: hierarchy_consistency, completeness, clarity, layout_quality (each 0–10), plus a short critique and a list of specific issues (if any).
+
+  **{{ plan_name }} plan**:
+  {{ plan_content }}

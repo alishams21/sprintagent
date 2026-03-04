@@ -1,0 +1,19 @@
+name: "module_critic_runner_instruction"
+version: "1.0"
+description: "Instruction for starting module plan critique"
+template_variables: []
+prompt: |
+  Evaluate the current module plan according to your critic prompt.
+
+  Your goals are to:
+  - Assess clarity and structure of the module (responsibilities, boundaries, interfaces).
+  - Judge technical soundness and alignment with non-functional requirements.
+  - Identify risks, dependencies, and missing or oversized modules.
+  - Check alignment with the project plan and that each component has one or more modules.
+
+  Provide:
+  1. A brief summary of overall plan quality.
+  2. Numerical scores and justifications for each evaluation dimension.
+  3. A prioritized list of issues (critical, major, refinements).
+  4. Concrete, actionable recommendations the module designer can apply.
+

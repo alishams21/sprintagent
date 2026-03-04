@@ -1,0 +1,19 @@
+name: "project_critic_runner_instruction"
+version: "1.0"
+description: "Instruction for starting project plan critique"
+template_variables: []
+prompt: |
+  Evaluate the current project plan according to your critic prompt.
+
+  Your goals are to:
+  - Assess clarity and structure of the project-level components.
+  - Judge feasibility, scope, and execution readiness.
+  - Identify risks, missing work, and problematic dependencies.
+  - Check alignment with the original project brief.
+
+  Provide:
+  1. A brief summary of overall plan quality.
+  2. Numerical scores and justifications for each evaluation dimension.
+  3. A prioritized list of issues (critical, major, refinements).
+  4. Concrete, actionable recommendations the designer can apply.
+

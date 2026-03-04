@@ -1,0 +1,16 @@
+name: "project_planner_runner_instruction"
+version: "1.0"
+description: "Initial instruction to start project planning workflow"
+template_variables: []
+prompt: |
+  Begin the project planning process.
+
+  Use the project planner to:
+  - Create an initial hierarchical plan (project → modules → tasks).
+  - Iterate through critique and improvement cycles.
+  - Stop when the plan is clear, feasible, and aligned with the brief.
+
+  Start by calling `request_initial_project_design()` to create the base plan. Then
+  alternate between `request_critique()` and `request_design_change()`
+  until the stopping conditions in the planner prompt are met.
+

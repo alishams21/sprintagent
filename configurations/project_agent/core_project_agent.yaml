@@ -1,0 +1,63 @@
+# Core Project Agent configuration with shared settings
+
+# Project mode: "module" (single module) or "project" (multi-module)
+mode: "module"
+
+# Session memory management for context efficiency.
+# Trims old conversation turns and optionally summarizes text.
+session_memory:
+  enabled: true
+  keep_last_n_turns: 2
+  enable_summarization: true
+  summarization_model: "gpt-5.2"
+  summarization_thinking: "medium"
+
+# Task constraints
+task:
+  min_duration_days: 1
+  max_duration_days: 60
+  default_priority: "medium"
+
+# Subtask constraints
+subtask:
+  min_duration_hours: 1
+  max_duration_hours: 24
+  default_priority: "medium"
+
+# Resource allocation configuration
+resources:
+  max_concurrent_tasks_per_member: 5
+  default_allocation_hours_per_day: 8
+  skill_matching_enabled: true
+
+# OpenAI model and reasoning configuration
+# BaseStatefulAgent uses keys: designer, critic, planner (reasoning_effort + verbosity)
+openai:
+  model: "gpt-5.2"
+  service_tier: ${openai.service_tier}
+  reasoning_effort:
+    designer: "medium"
+    planner: "medium"
+    manager: "medium"
+    critic: "medium"
+  verbosity:
+    designer: "medium"
+    planner: "medium"
+    manager: "medium"
+    critic: "medium"
+
+# API timeout configuration (seconds)
+api_timeout:
+  connect: 30.0
+  read: 1800
+  write: 1800
+  pool: 1800
+
+# Maximum number of planning-review cycles before stopping
+max_review_cycles: 3
+
+# BaseStatefulAgent: number of critique rounds (0 = no request_critique/request_design_change tools)
+max_critique_rounds: 3
+
+# Early finish threshold - stop if all tasks meet quality criteria
+early_finish_min_score: 8

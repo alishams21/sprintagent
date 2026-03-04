@@ -1,0 +1,24 @@
+name: "task_designer_critique_instruction"
+version: "1.0"
+description: "Instruction for task designer to address critic feedback"
+template_variables: ["instruction"]
+prompt: |
+  The task critic has provided feedback on your task plan.
+  Address the following issues:
+
+  {{ instruction }}
+
+  Focus on improving:
+  - Clarity of the task description.
+  - Scope and feasibility (size and complexity).
+  - Coverage of steps/subtasks.
+  - Acceptance criteria (objectivity and testability).
+  - Dependencies and preconditions.
+
+  Make concrete changes to the task summary, subtasks, acceptance criteria,
+  and dependencies so the updated plan directly responds to the critic’s comments.
+
+  After making changes, summarize:
+  - What you modified and why.
+  - How the new task definition better addresses the critic’s concerns.
+

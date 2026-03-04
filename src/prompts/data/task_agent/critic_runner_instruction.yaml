@@ -1,0 +1,20 @@
+name: "task_critic_runner_instruction"
+version: "1.0"
+description: "Instruction for starting task plan critique"
+template_variables: []
+prompt: |
+  Evaluate the current task plan according to your critic prompt.
+
+  Your goals are to:
+  - Assess clarity and scope of tasks for each module.
+  - Judge feasibility within typical time constraints.
+  - Check coverage of tasks per module and acceptance criteria.
+  - Identify dependencies, preconditions, and risks.
+  - Verify alignment with the module plan.
+
+  Provide:
+  1. A brief summary of overall task quality and readiness.
+  2. Numerical scores and justifications for each evaluation dimension.
+  3. A prioritized list of issues (critical, major, refinements).
+  4. Concrete, actionable recommendations the task designer can apply.
+

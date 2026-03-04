@@ -1,0 +1,16 @@
+name: "module_planner_runner_instruction"
+version: "1.0"
+description: "Initial instruction to start module planning workflow"
+template_variables: []
+prompt: |
+  Begin the module planning process.
+
+  Use the module planner to:
+  - Create an initial plan for this module (structure + tasks).
+  - Iterate through critique and improvement cycles.
+  - Stop when the plan is clear, feasible, and aligned with the module brief.
+
+  Start by calling `request_initial_design()` to create the base module plan.
+  Then alternate between `request_critique()` and `request_design_change()`
+  until the stopping conditions in the module planner prompt are met.
+

@@ -1,0 +1,12 @@
+name: "visualization_designer_critique_instruction"
+version: "1.0"
+description: "Instruction for visualization designer to address critic feedback"
+template_variables: ["instruction"]
+prompt: |
+  The visualization critic has reviewed the current hierarchy diagram and provided feedback.
+
+  Address the following issues:
+
+  {{ instruction }}
+
+  Produce an updated Mermaid diagram that fixes these issues. Output ONLY a ```mermaid code block with the revised diagram. Match the structure: project components on top, then modules, then tasks. Keep names consistent with the original plans.

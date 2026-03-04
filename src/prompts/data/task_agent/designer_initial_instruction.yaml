@@ -1,0 +1,22 @@
+name: "task_designer_initial_instruction"
+version: "1.0"
+description: "Initial instruction for task designer"
+template_variables: []
+prompt: |
+  Create the initial task plan based on the module plan.
+
+  Your goal is to define tasks for **each module** in the input:
+  - Parse the module plan and identify all modules.
+  - For each module: define tasks (0.5–2 days each) with acceptance criteria.
+  - Ensure tasks cover implementation, tests, observability, docs, integration.
+  - Document dependencies between tasks.
+
+  Follow these phases:
+  1. Parse the module plan and list all modules.
+  2. For each module, break the work into actionable tasks.
+  3. Add acceptance criteria and definitions of done.
+  4. Identify dependencies and sequencing.
+  5. Verify completeness and consistency.
+
+  When complete, return the full task plan (all tasks grouped by module).
+  Each task should be small, clear, and assignable.

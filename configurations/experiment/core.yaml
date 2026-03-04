@@ -1,0 +1,69 @@
+# Tasks to run sequentially
+tasks: [plan_project]
+
+# Path to CSV file with project/module/task descriptions (optional)
+# CSV format: index,description (header row required)
+# Example:
+#   index,description
+#   1,"Implement user authentication module"
+#   2,"Create payment processing module"
+#   3,"Setup CI/CD pipeline for backend services"
+csv_path: null
+
+# List of project/module/task prompts (used if csv_path is null)
+prompts: [
+  "Plan the frontend dashboard module, including UI design tasks and testing tasks."
+]
+
+# Number of parallel workers; 1 = sequential for debugging
+num_workers: 1
+
+# Pipeline stage control
+# Stages run in order: project → module → task → visualization
+# Set start_stage to resume from a specific stage
+# Set stop_stage to stop after a specific stage
+pipeline:
+  start_stage: "project"       # Options: project, module, task, visualization
+  stop_stage: "visualization"  # Options: project, module, task, visualization (visualization = full pipeline)
+  resume_from_path: null       # Path to previous experiment output
+  parallel_modules: false      # Parallelize modules (mutually exclusive with num_workers > 1)
+  max_parallel_modules: 1
+
+# Resource allocation server settings
+resource_allocation_server:
+  host: "127.0.0.1"
+  port: 8001
+
+# Dependency management server settings
+dependency_server:
+  host: "127.0.0.1"
+  port: 8002
+
+# Version control integration server settings
+vcs_server:
+  host: "127.0.0.1"
+  port: 8003
+
+# Task evaluation export configuration
+task_eval_export:
+  enabled: true
+  asset_id_prefix: "project_manager"
+
+# Post-processing / validation configuration
+post_processing:
+  enabled: true              # Master enable/disable flag
+  deadline_check:
+    enabled: true
+    threshold_days: 2       # Warn if task/subtask exceeds this threshold
+  resource_conflict_check:
+    enabled: true
+    max_overlapping_tasks: 3
+  dependency_validation:
+    enabled: true
+    max_dependency_depth: 5
+  simulation:
+    enabled: true
+    simulation_time_s: 60.0     # Time to simulate project execution (seconds)
+    time_step_s: 1.0            # Step in seconds
+    timeout_s: 300.0            # Max wall-clock time
+    save_html: false            # Save interactive Gantt chart (for debugging)

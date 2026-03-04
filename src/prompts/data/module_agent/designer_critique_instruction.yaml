@@ -1,0 +1,23 @@
+name: "module_designer_critique_instruction"
+version: "1.0"
+description: "Instruction for module designer to address critic feedback"
+template_variables: ["instruction"]
+prompt: |
+  The module critic has provided feedback on your module plan.
+  Address the following issues:
+
+  {{ instruction }}
+
+  Focus on improving:
+  - Module boundaries, responsibilities, and interfaces.
+  - Internal structure and subcomponents.
+  - Dependencies, sequencing, and risk mitigation.
+  - Alignment with the project plan and any constraints.
+
+  Make concrete changes to the module structure so the updated plan
+  directly responds to the critic’s comments. Do not add tasks.
+
+  After making changes, summarize:
+  - What you modified and why.
+  - How the new plan better addresses the critic’s concerns.
+

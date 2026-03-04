@@ -1,0 +1,17 @@
+# Configuration parsing starts here.
+
+# Global OpenAI settings (propagated to all agents via Hydra interpolation).
+openai:
+  # Service tier for API processing. Valid values:
+  #   null       - Don't pass parameter (uses project default)
+  #   "default"  - Standard pricing and performance
+  #   "flex"     - Lower cost, slower processing (Batch API rates)
+  #   "priority" - Lower latency, premium pricing
+  service_tier: "default"
+
+defaults:
+  - experiment: plan_project # Experiment yaml file name in configurations/experiment folder
+  - project_agent: workflow_project_agent # Top-level agent managing the overall project
+  - module_agent: workflow_module_agent # Agent managing modules/components within the project
+  - task_agent: workflow_task_agent # Agent managing individual tasks under each module
+  - visualization_agent: workflow_visualization_agent # Agent that draws hierarchy diagram from plans

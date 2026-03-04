@@ -1,0 +1,17 @@
+defaults:
+  - core_module_agent
+
+# Used by BaseExperiment.build_module_agent to select agent class
+_name: workflow_module_agent
+
+# Agent configurations (BaseStatefulAgent expects designer_agent, critic_agent, planner_agent)
+agents:
+  designer_agent:
+    name: "module_designer"
+    max_turns: 500
+  critic_agent:
+    name: "module_critic"
+    max_turns: 300
+  planner_agent:
+    name: "module_planner"
+    max_turns: 64
