@@ -17,7 +17,7 @@ The system is **autonomous**: you provide a brief, and agents iteratively refine
 
 ---
 
-The system constructs the roadmap through a tree of four stages. The **root stage** (project) generates the high-level layout: it determines components and boundaries and produces `project_plan.md`. Each component is then refined independently through the **module** stage, which produces a module structure per component, and the **task** stage, which adds concrete tasks per module—each stage guided by the previous stage’s output. The **visualization** stage runs once per plan type (project, then module, then task), spawning one diagram branch per plan, each guided by that plan’s content. All stages are implemented as agentic interactions (planner/designer/critic). This hierarchical prompt refinement lets each level make local decisions while staying coherent with the original brief. The orchestrator assembles the outputs into plan files and diagrams under a single run directory, suitable for handoff to execution or downstream tools.
+The system constructs the roadmap through a tree of four stages. The **root stage** (project) generates the high-level layout: it determines components and boundaries and produces `project_plan.md`. Each component is then refined independently through the **module** stage, which produces a module structure per component, and the **task** stage, which adds concrete tasks per module—each stage guided by the previous stage's output. The **visualization** stage runs once per plan type (project, then module, then task), spawning one diagram branch per plan, each guided by that plan's content. All stages are implemented as agentic interactions (planner/designer/critic). This hierarchical prompt refinement lets each level make local decisions while staying coherent with the original brief. The orchestrator assembles the outputs into plan files and diagrams under a single run directory, suitable for handoff to execution or downstream tools.
 
 ![Hierarchical scene construction pipelin](figures/pipeline.png)
  
@@ -50,7 +50,7 @@ Creates and refines the plan. It receives the context (brief or parent plan), pr
 
 ### 2. Critic
 
-Evaluates the current plan (or diagram) against domain-specific criteria (structure, clarity, completeness, etc.) and returns structured feedback with scores. For project/module/task, the critic reads the designer’s session history; for **visualization**, the critic is a **VLM** that receives the diagram image plus the plan text. Its output is passed to the planner, which decides whether to request changes or stop.
+Evaluates the current plan (or diagram) against domain-specific criteria (structure, clarity, completeness, etc.) and returns structured feedback with scores. For project/module/task, the critic reads the designer's session history; for **visualization**, the critic is a **VLM** that receives the diagram image plus the plan text. Its output is passed to the planner, which decides whether to request changes or stop.
 
 ### 3. Planner
 
@@ -105,11 +105,14 @@ Outputs are written under `outputs/<timestamp>/<run>/prompt_<id>/`.
 | Feature | Description |
 |---------|-------------|
 | **Autonomous hierarchical system** | Agents operate independently at each level; the pipeline chains them without manual handoffs. |
-| **Fault tolerance** | Checkpoint rollback recovers from quality regressions. Session persistence (SQLite) survives restarts. |
-| **Consistency between agents** | Each stage consumes the previous stage’s output. The critic loop ensures outputs meet quality standards before advancing. |
-| **Critic loop per agent** | Every agent (project, module, task, visualization) runs its own designer/critic cycle. Plans (and diagrams) are refined to a high standard; visualization uses a VLM critic to compare diagram images to plans. |
-| **Session persistence** | Designer and critic conversations are stored in SQLite (e.g. `prompt_000_project_designer.db`, `prompt_000_visualization_project_designer.db`), with optional turn-trimming and summarization for long runs. |
-| **Config-driven workflows** | Agents, tools, and pipelines are wired via YAML; no code changes needed for new experiments. |
+| **Planner/designer/critic** | Orchestrated sub-agents with tool composition and structured scoring. |
+| **Checkpointing & Auto-reset** | If critic scores degrade, the system rolls back to the last good state instead of drifting. |
+| **Turn trimming** | Automatically trims older turns while preserving a concise summary, so agent history stays performant and focused. |
+| **Auditability & Session management** | DB-backed history so designer/critic context survives restarts and every interaction is inspectable. |
+| **Isolated process execution** | Each run in its own process with fault tolerance; one failure does not cascade. |
+| **Parallel & Sequential runs** | Config-driven execution across prompts with process-level isolation. |
+| **Config & Resolve system** | Custom resolvers designed for the complex configuration needs of agent builders. |
+| **Unified logging** | Same structure for file and terminal, providing full observability and explainability. |
 
 ---
 
@@ -155,4 +158,3 @@ See `configurations/` for pipeline and agent configuration examples. Quick hints
 | **Global OpenAI** | `configurations/config.yaml` | `openai.service_tier` |
 
 `<agent>` = `project_agent`, `module_agent`, `task_agent`, or `visualization_agent`.
-
